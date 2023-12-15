@@ -1,0 +1,6 @@
+[submodule "src/lib/2d-phy"]
+	path = src/lib/2d-phy
+	url = https://github.com/gnikoloff/2d-phy
+[submodule "src/lib/hwoa-rang-gl2"]
+	path = src/lib/hwoa-rang-gl2
+	url = https://github.com/gnikoloff/hwoa-rang-gl2

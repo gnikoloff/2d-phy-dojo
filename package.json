@@ -1,0 +1,30 @@
+{
+  "name": "2d-phy-dojo",
+  "version": "1.0.0",
+  "description": "2D physics with C++ and WebGL2",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/gnikoloff/2d-phy-dojo.git"
+  },
+  "keywords": [
+    "2d",
+    "physics",
+    "webgl",
+    "webgl2"
+  ],
+  "author": "Georgi Nikolov <connect@georgi-nikolov.com> (http://georgi-nikolov.com)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gnikoloff/2d-phy-dojo/issues"
+  },
+  "homepage": "https://github.com/gnikoloff/2d-phy-dojo#readme",
+  "devDependencies": {
+    "vite": "^5.0.9",
+    "vite-plugin-top-level-await": "^1.4.1"
+  }
+}
