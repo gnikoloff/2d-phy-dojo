@@ -21,7 +21,13 @@ const CIRCLE_SHAPE = 1;
 const TRIANGLE_SHAPE = 2;
 const OUT_OF_SCREEN_VEC2 = new Vec2(-1000, -1000);
 const SIM_WIDTH = Math.min(innerWidth, 1920);
+const INTRO_DELAY = 300;
+const TOTAL_AREA = innerWidth * innerHeight;
+const MOBILE_AREA = 500_000;
+const IS_SMALL_SCREEN = TOTAL_AREA < MOBILE_AREA;
+
 const widthDelta = innerWidth - SIM_WIDTH;
+const tempVector = new Vec2(-1000, -1000);
 
 let oldTime = 0;
 
@@ -87,10 +93,10 @@ const cc = document.createElement("canvas");
 cc.width = innerWidth;
 cc.height = innerHeight;
 cc.style.setProperty("position", "fixed");
-cc.style.setProperty("bottom", "0px");
+cc.style.setProperty("top", `${-innerHeight * 0.1}px`);
 cc.style.setProperty("left", "0px");
 cc.style.setProperty("z-index", "999");
-cc.style.setProperty("border", "1px solid blue");
+// cc.style.setProperty("border", "1px solid blue");
 cc.classList.add("fadeable");
 // cc.style.setProperty("display", "none");
 document.body.appendChild(cc);
@@ -132,8 +138,8 @@ for (let x = 0; x < cc.width; x += gridX) {
 const boxAnimatedBodies = [];
 const circleAnimatedBodies = [];
 const triangleAnimatedBodies = [];
-const world = new World(-7, innerWidth, innerHeight);
-world.gravity = -10;
+const world = new World(-4.5, innerWidth, innerHeight);
+world.gravity = -1;
 const floor = new Body(innerWidth, 1, innerWidth * 0.5, innerHeight, 0);
 floor.restitution = 1;
 const leftWall = new Body(1, innerHeight * 2, 0, innerHeight * 0.5, 0);
@@ -164,8 +170,8 @@ while (offsetY < coverHeight) {
 	const maxScaleAllowed = Math.cos((offsetY / coverHeight) * Math.PI * 2);
 	while (offsetX < SIM_WIDTH) {
 		// on mobile it is 16 -> 10 and 30 -> 20
-		const a = 21;
-		const b = 36;
+		const a = IS_SMALL_SCREEN ? 11 : 21;
+		const b = IS_SMALL_SCREEN ? 25 : 36;
 		let halfScaleAllowed = (maxScaleAllowed * a + b) * 0.5;
 		// if (offsetY > coverHeight * 0.16 && offsetY < coverHeight * 0.85) {
 		// 	halfScaleAllowed = (maxScaleAllowed * 12 + 25) * 0.5;
@@ -181,7 +187,7 @@ while (offsetY < coverHeight) {
 		if (offsetY > coverHeight * 0.3 && offsetY < coverHeight * 0.7) {
 			shapeType = Math.floor(Math.random() * 2);
 		}
-		const adjustedOffsetY = offsetY - innerHeight * 1.5;
+		const adjustedOffsetY = offsetY - innerHeight * 0.1;
 		if (shapeType === CIRCLE_SHAPE) {
 			body = new Body(scale * 1.015, circleX, adjustedOffsetY, 1);
 			body.scale = scale;
@@ -376,12 +382,11 @@ orientationMdq.addEventListener("change", () => {
 });
 setTimeout(() => {
 	cc.classList.add("faded");
+	requestAnimationFrame(drawFrame);
 	cc.addEventListener("transitionend", () => {
 		cc.parentNode.removeChild(cc);
-
-		requestAnimationFrame(drawFrame);
 	});
-}, 250);
+}, INTRO_DELAY);
 document.body.addEventListener("mousedown", onMouseDown);
 document.body.addEventListener("mouseup", onMouseUp);
 document.body.addEventListener("touchmove", onTouchMove);
@@ -392,21 +397,12 @@ function onMouseDown() {
 }
 
 function onMouseMove(e) {
-	let x = e.pageX;
-	let y = e.pageY;
-	if (x > innerWidth * 0.95) {
-		x = innerWidth * 0.95;
-	}
-	if (x < innerWidth * 0.05) {
-		x = innerWidth * 0.05;
-	}
-	if (y > innerHeight * 0.85) {
-		y = innerHeight * 0.85;
-	}
-	if (y < innerHeight * 0.15) {
-		y = innerHeight * 0.15;
-	}
-	mouseCircle.position = new Vec2(x, y);
+	const x = adjustScreenPointerX(e.pageX);
+	const y = adjustScreenPointerY(e.pageY);
+
+	tempVector.x = x;
+	tempVector.y = y;
+	mouseCircle.position = tempVector;
 }
 
 function onMouseUp() {
@@ -415,7 +411,11 @@ function onMouseUp() {
 }
 
 function onTouchMove(e) {
-	mouseCircle.position = new Vec2(e.pageX, e.pageY);
+	const x = adjustScreenPointerX(e.pageX);
+	const y = adjustScreenPointerY(e.pageY);
+	tempVector.x = x;
+	tempVector.y = y;
+	mouseCircle.position = tempVector;
 	e.preventDefault();
 }
 
@@ -616,11 +616,44 @@ function drawScene() {
 		triangleGeometry.vertexCount,
 		triangleAnimatedBodies.length,
 	);
+
+	gl.useProgram(lineProgram);
+	gl.drawArraysInstanced(
+		gl.LINE_LOOP,
+		0,
+		triangleGeometry.vertexCount,
+		triangleAnimatedBodies.length,
+	);
 }
 
 function resize() {
-	c.width = innerWidth * devicePixelRatio;
-	c.height = innerHeight * devicePixelRatio;
+	c.width = innerWidth;
+	c.height = innerHeight;
 	c.style.setProperty("width", `${innerWidth}px`);
 	c.style.setProperty("height", `${innerHeight}px`);
+}
+
+function adjustScreenPointerX(x: number) {
+	const offsetLeft = IS_SMALL_SCREEN ? 0.2 : 0.15;
+	const offsetRight = IS_SMALL_SCREEN ? 0.8 : 0.85;
+	if (x > innerWidth * offsetRight) {
+		x = innerWidth * offsetRight;
+	}
+	if (x < innerWidth * offsetLeft) {
+		x = innerWidth * offsetLeft;
+	}
+	return x;
+}
+
+function adjustScreenPointerY(y: number) {
+	const offsetTop = IS_SMALL_SCREEN ? 0.25 : 0.15;
+	const offsetBottom = IS_SMALL_SCREEN ? 0.75 : 0.85;
+
+	if (y > innerHeight * offsetBottom) {
+		y = innerHeight * offsetBottom;
+	}
+	if (y < innerHeight * offsetTop) {
+		y = innerHeight * offsetTop;
+	}
+	return y;
 }

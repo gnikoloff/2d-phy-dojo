@@ -3,6 +3,7 @@ import topLevelAwait from "vite-plugin-top-level-await";
 import glsl from "vite-plugin-glsl";
 
 export default defineConfig({
+	base: "",
 	build: {
 		outDir: "docs",
 	},
