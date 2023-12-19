@@ -21,12 +21,16 @@ const CIRCLE_SHAPE = 1;
 const TRIANGLE_SHAPE = 2;
 const OUT_OF_SCREEN_VEC2 = new Vec2(-1000, -1000);
 const SIM_WIDTH = Math.min(innerWidth, 1920);
+const SIM_HEIGHT = Math.min(innerHeight, 800);
 const INTRO_DELAY = 300;
 const TOTAL_AREA = innerWidth * innerHeight;
 const MOBILE_AREA = 500_000;
 const IS_SMALL_SCREEN = TOTAL_AREA < MOBILE_AREA;
+const INSIDE_COLOR = [0.945, 0.7686, 0.0588];
+const OUTSIDE_COLOR = [0.1725, 0.2431, 0.3137];
 
 const widthDelta = innerWidth - SIM_WIDTH;
+const heightDelta = innerHeight - SIM_HEIGHT;
 const tempVector = new Vec2(-1000, -1000);
 
 let oldTime = 0;
@@ -91,9 +95,9 @@ gl.uniformMatrix4fv(
 const wordPositions = [];
 const cc = document.createElement("canvas");
 cc.width = SIM_WIDTH;
-cc.height = innerHeight;
+cc.height = SIM_HEIGHT;
 cc.style.setProperty("position", "fixed");
-cc.style.setProperty("top", `${-innerHeight * 0.1}px`);
+cc.style.setProperty("top", `${heightDelta * 0.5}px`);
 cc.style.setProperty("left", `${widthDelta * 0.5}px`);
 cc.style.setProperty("z-index", "999");
 // cc.style.setProperty("border", "1px solid blue");
@@ -114,7 +118,7 @@ ctx.fillStyle = "white";
 ctx.save();
 ctx.translate(cc.width * 0.5, cc.height * 0.5);
 ctx.scale(1, 1);
-ctx.fillStyle = "black";
+ctx.fillStyle = "rgb(241, 196, 15)";
 ctx.fillText(word, 0, 0);
 ctx.restore();
 const idata = new Uint32Array(
@@ -127,7 +131,7 @@ ctx.globalAlpha = 0.2;
 for (let x = 0; x < cc.width; x += gridX) {
 	for (let y = 0; y < cc.height; y += gridY) {
 		if (idata[y * cc.width + x]) {
-			wordPositions.push({ x: x + widthDelta * 0.5, y });
+			wordPositions.push({ x: x + widthDelta * 0.5, y: y + heightDelta * 0.5 });
 		}
 	}
 }
@@ -138,8 +142,7 @@ for (let x = 0; x < cc.width; x += gridX) {
 const boxAnimatedBodies = [];
 const circleAnimatedBodies = [];
 const triangleAnimatedBodies = [];
-const world = new World(-4.5, innerWidth, innerHeight);
-world.gravity = -1;
+const world = new World(-6.5, innerWidth, innerHeight);
 const floor = new Body(innerWidth, 1, innerWidth * 0.5, innerHeight, 0);
 floor.restitution = 1;
 const leftWall = new Body(1, innerHeight * 2, 0, innerHeight * 0.5, 0);
@@ -163,15 +166,14 @@ world.AddBody(mouseCircle);
 //////////////////////////////////////////////////////////////////////////
 let offsetY = 0;
 let stepYIdx = 0;
-const coverHeight = innerHeight;
+const coverHeight = SIM_HEIGHT;
 while (offsetY < coverHeight) {
 	let biggestRowScale = 0;
 	let offsetX = 0;
 	const maxScaleAllowed = Math.cos((offsetY / coverHeight) * Math.PI * 2);
 	while (offsetX < SIM_WIDTH) {
-		// on mobile it is 16 -> 10 and 30 -> 20
-		const a = IS_SMALL_SCREEN ? 11 : 21;
-		const b = IS_SMALL_SCREEN ? 25 : 36;
+		const a = IS_SMALL_SCREEN ? 11 : 36;
+		const b = IS_SMALL_SCREEN ? 25 : 51;
 		let halfScaleAllowed = (maxScaleAllowed * a + b) * 0.5;
 		// if (offsetY > coverHeight * 0.16 && offsetY < coverHeight * 0.85) {
 		// 	halfScaleAllowed = (maxScaleAllowed * 12 + 25) * 0.5;
@@ -179,7 +181,7 @@ while (offsetY < coverHeight) {
 		let scale = halfScaleAllowed + Math.random() * halfScaleAllowed;
 
 		const circleX = scale * 0.5 + offsetX + widthDelta * 0.5;
-		const circleY = offsetY;
+		const circleY = offsetY + heightDelta * 0.5;
 
 		let body;
 
@@ -187,7 +189,7 @@ while (offsetY < coverHeight) {
 		if (offsetY > coverHeight * 0.3 && offsetY < coverHeight * 0.7) {
 			shapeType = Math.floor(Math.random() * 2);
 		}
-		const adjustedOffsetY = offsetY - innerHeight * 0.1;
+		const adjustedOffsetY = offsetY - innerHeight * 0.1 + heightDelta * 0.625;
 		if (shapeType === CIRCLE_SHAPE) {
 			body = new Body(scale * 1.015, circleX, adjustedOffsetY, 1);
 			body.scale = scale;
@@ -219,7 +221,7 @@ while (offsetY < coverHeight) {
 		}
 
 		body.restitution = 0.1;
-		body.color = 1;
+		body.isInside = false;
 		world.AddBody(body);
 
 		for (let n = 0; n < wordPositions.length; n++) {
@@ -229,7 +231,7 @@ while (offsetY < coverHeight) {
 			const dist = Math.sqrt(dx * dx + dy * dy);
 			const minDist = 10;
 			if (dist < minDist) {
-				body.color = 0;
+				body.isInside = true;
 			}
 		}
 		offsetX += scale * 2;
@@ -252,9 +254,9 @@ for (let i = 0; i < boxAnimatedBodies.length; i++) {
 	boxTransforms[i * 4 + 2] = 0;
 	boxTransforms[i * 4 + 3] = body.scale;
 
-	boxColors[i * 3 + 0] = 0;
-	boxColors[i * 3 + 1] = body.color;
-	boxColors[i * 3 + 2] = 0;
+	boxColors[i * 3 + 0] = body.isInside ? INSIDE_COLOR[0] : OUTSIDE_COLOR[0];
+	boxColors[i * 3 + 1] = body.isInside ? INSIDE_COLOR[1] : OUTSIDE_COLOR[1];
+	boxColors[i * 3 + 2] = body.isInside ? INSIDE_COLOR[2] : OUTSIDE_COLOR[2];
 }
 
 for (let i = 0; i < circleAnimatedBodies.length; i++) {
@@ -264,9 +266,15 @@ for (let i = 0; i < circleAnimatedBodies.length; i++) {
 	circleTransforms[i * 4 + 2] = 0;
 	circleTransforms[i * 4 + 3] = circle.scale;
 
-	circleColors[i * 3 + 0] = 0;
-	circleColors[i * 3 + 1] = circle.color;
-	circleColors[i * 3 + 2] = 0;
+	circleColors[i * 3 + 0] = circle.isInside
+		? INSIDE_COLOR[0]
+		: OUTSIDE_COLOR[0];
+	circleColors[i * 3 + 1] = circle.isInside
+		? INSIDE_COLOR[1]
+		: OUTSIDE_COLOR[1];
+	circleColors[i * 3 + 2] = circle.isInside
+		? INSIDE_COLOR[2]
+		: OUTSIDE_COLOR[2];
 }
 
 for (let i = 0; i < triangleAnimatedBodies.length; i++) {
@@ -276,9 +284,15 @@ for (let i = 0; i < triangleAnimatedBodies.length; i++) {
 	triangleTransforms[i * 4 + 2] = 0;
 	triangleTransforms[i * 4 + 3] = triangle.scale;
 
-	triangleColors[i * 3 + 0] = 0;
-	triangleColors[i * 3 + 1] = triangle.color;
-	triangleColors[i * 3 + 2] = 0;
+	triangleColors[i * 3 + 0] = triangle.isInside
+		? INSIDE_COLOR[0]
+		: OUTSIDE_COLOR[0];
+	triangleColors[i * 3 + 1] = triangle.isInside
+		? INSIDE_COLOR[1]
+		: OUTSIDE_COLOR[1];
+	triangleColors[i * 3 + 2] = triangle.isInside
+		? INSIDE_COLOR[2]
+		: OUTSIDE_COLOR[2];
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -456,7 +470,7 @@ function drawFrame(now) {
 
 	// global GL state
 	gl.viewport(0, 0, c.width, c.height);
-	gl.clearColor(0.6, 0.6, 0.6, 1);
+	gl.clearColor(0.498, 0.549, 0.5529, 1);
 	gl.clear(gl.COLOR_BUFFER_BIT);
 	gl.enableVertexAttribArray(instanceTransformAttrib);
 	gl.enableVertexAttribArray(instanceColorAttrib);
@@ -646,8 +660,8 @@ function adjustScreenPointerX(x: number) {
 }
 
 function adjustScreenPointerY(y: number) {
-	const offsetTop = IS_SMALL_SCREEN ? 0.25 : 0.15;
-	const offsetBottom = IS_SMALL_SCREEN ? 0.75 : 0.85;
+	const offsetTop = IS_SMALL_SCREEN ? 0.25 : 0.2;
+	const offsetBottom = IS_SMALL_SCREEN ? 0.75 : 0.8;
 
 	if (y > innerHeight * offsetBottom) {
 		y = innerHeight * offsetBottom;

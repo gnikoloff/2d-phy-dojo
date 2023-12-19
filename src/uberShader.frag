@@ -10,7 +10,7 @@ out vec4 finalColor;
 
 void main () {
   #ifdef LINES
-    finalColor = vec4(vec3(0.8), 1.0);
+    finalColor = vec4(0.5843, 0.647, 0.6509, 1.0);
   #else
     finalColor = vColor;
   #endif
