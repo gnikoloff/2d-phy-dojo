@@ -90,11 +90,11 @@ gl.uniformMatrix4fv(
 //////////////////////////////////////////////////////////////////////////
 const wordPositions = [];
 const cc = document.createElement("canvas");
-cc.width = innerWidth;
+cc.width = SIM_WIDTH;
 cc.height = innerHeight;
 cc.style.setProperty("position", "fixed");
 cc.style.setProperty("top", `${-innerHeight * 0.1}px`);
-cc.style.setProperty("left", "0px");
+cc.style.setProperty("left", `${widthDelta * 0.5}px`);
 cc.style.setProperty("z-index", "999");
 // cc.style.setProperty("border", "1px solid blue");
 cc.classList.add("fadeable");
@@ -127,7 +127,7 @@ ctx.globalAlpha = 0.2;
 for (let x = 0; x < cc.width; x += gridX) {
 	for (let y = 0; y < cc.height; y += gridY) {
 		if (idata[y * cc.width + x]) {
-			wordPositions.push({ x, y });
+			wordPositions.push({ x: x + widthDelta * 0.5, y });
 		}
 	}
 }
@@ -384,7 +384,7 @@ setTimeout(() => {
 	cc.classList.add("faded");
 	requestAnimationFrame(drawFrame);
 	cc.addEventListener("transitionend", () => {
-		cc.parentNode.removeChild(cc);
+		// cc.parentNode.removeChild(cc);
 	});
 }, INTRO_DELAY);
 document.body.addEventListener("mousedown", onMouseDown);
