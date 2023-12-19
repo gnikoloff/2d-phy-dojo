@@ -20,6 +20,8 @@ const BOX_SHAPE = 0;
 const CIRCLE_SHAPE = 1;
 const TRIANGLE_SHAPE = 2;
 const OUT_OF_SCREEN_VEC2 = new Vec2(-1000, -1000);
+const SIM_WIDTH = Math.min(innerWidth, 1920);
+const widthDelta = innerWidth - SIM_WIDTH;
 
 let oldTime = 0;
 
@@ -123,12 +125,6 @@ for (let x = 0; x < cc.width; x += gridX) {
 		}
 	}
 }
-setTimeout(() => {
-	cc.classList.add("faded");
-	cc.addEventListener("transitionend", () => {
-		cc.parentNode.removeChild(cc);
-	});
-}, 250);
 
 //////////////////////////////////////////////////////////////////////////
 // Set up physics world
@@ -136,7 +132,7 @@ setTimeout(() => {
 const boxAnimatedBodies = [];
 const circleAnimatedBodies = [];
 const triangleAnimatedBodies = [];
-const world = new World(-5, innerWidth, innerHeight);
+const world = new World(-7, innerWidth, innerHeight);
 world.gravity = -10;
 const floor = new Body(innerWidth, 1, innerWidth * 0.5, innerHeight, 0);
 floor.restitution = 1;
@@ -166,17 +162,17 @@ while (offsetY < coverHeight) {
 	let biggestRowScale = 0;
 	let offsetX = 0;
 	const maxScaleAllowed = Math.cos((offsetY / coverHeight) * Math.PI * 2);
-	while (offsetX < innerWidth) {
+	while (offsetX < SIM_WIDTH) {
 		// on mobile it is 16 -> 10 and 30 -> 20
-		const a = innerWidth > innerHeight ? 21 : 15;
-		const b = innerWidth > innerHeight ? 36 : 28;
+		const a = 21;
+		const b = 36;
 		let halfScaleAllowed = (maxScaleAllowed * a + b) * 0.5;
 		// if (offsetY > coverHeight * 0.16 && offsetY < coverHeight * 0.85) {
 		// 	halfScaleAllowed = (maxScaleAllowed * 12 + 25) * 0.5;
 		// }
 		let scale = halfScaleAllowed + Math.random() * halfScaleAllowed;
 
-		const circleX = scale * 0.5 + offsetX;
+		const circleX = scale * 0.5 + offsetX + widthDelta * 0.5;
 		const circleY = offsetY;
 
 		let body;
@@ -378,7 +374,14 @@ orientationMdq.addEventListener("change", () => {
 		location.reload();
 	}
 });
-requestAnimationFrame(drawFrame);
+setTimeout(() => {
+	cc.classList.add("faded");
+	cc.addEventListener("transitionend", () => {
+		cc.parentNode.removeChild(cc);
+
+		requestAnimationFrame(drawFrame);
+	});
+}, 250);
 document.body.addEventListener("mousedown", onMouseDown);
 document.body.addEventListener("mouseup", onMouseUp);
 document.body.addEventListener("touchmove", onTouchMove);
@@ -543,6 +546,7 @@ function drawScene() {
 	// circles interleaved buffer
 	gl.bindBuffer(gl.ARRAY_BUFFER, circleVertexBuffer);
 	// circles position
+
 	gl.vertexAttribPointer(
 		positionAttrib,
 		3,
@@ -552,6 +556,7 @@ function drawScene() {
 		0,
 	);
 	// circles uvs
+
 	gl.vertexAttribPointer(
 		uvAttrib,
 		2,
@@ -603,14 +608,7 @@ function drawScene() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBuffer);
 
 	// triangle position
-	gl.vertexAttribPointer(
-		positionAttrib,
-		3,
-		gl.FLOAT,
-		false,
-		5 * Float32Array.BYTES_PER_ELEMENT,
-		0,
-	);
+	gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
 
 	gl.drawArraysInstanced(
 		gl.TRIANGLES,
@@ -621,8 +619,6 @@ function drawScene() {
 }
 
 function resize() {
-	// c.width = innerWidth * devicePixelRatio;
-	// c.height = innerHeight * devicePixelRatio;
 	c.width = innerWidth * devicePixelRatio;
 	c.height = innerHeight * devicePixelRatio;
 	c.style.setProperty("width", `${innerWidth}px`);
