@@ -26,8 +26,8 @@ const INTRO_DELAY = 300;
 const TOTAL_AREA = innerWidth * innerHeight;
 const MOBILE_AREA = 500_000;
 const IS_SMALL_SCREEN = TOTAL_AREA < MOBILE_AREA;
-const INSIDE_COLOR = [0.945, 0.7686, 0.0588];
-const OUTSIDE_COLOR = [0.1725, 0.2431, 0.3137];
+const INSIDE_COLOR = [0.1, 0.1, 0.1];
+const OUTSIDE_COLOR = [0.945, 0.7686, 0.0588];
 
 const widthDelta = innerWidth - SIM_WIDTH;
 const heightDelta = innerHeight - SIM_HEIGHT;
@@ -118,7 +118,7 @@ ctx.fillStyle = "white";
 ctx.save();
 ctx.translate(cc.width * 0.5, cc.height * 0.5);
 ctx.scale(1, 1);
-ctx.fillStyle = "rgb(241, 196, 15)";
+ctx.fillStyle = "#111";
 ctx.fillText(word, 0, 0);
 ctx.restore();
 const idata = new Uint32Array(
