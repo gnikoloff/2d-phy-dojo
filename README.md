@@ -9,7 +9,7 @@
 ## Dependencies
 
 - [2d-phy](https://github.com/gnikoloff/2d-phy) - lightweight 2D physics engine written in C++. Constructs and methods are exposed to JS via [embind](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html)
-- [hwoa-rang-gl2] - drawing utilities for WebGL2
+- [hwoa-rang-gl2](https://github.com/gnikoloff/hwoa-rang-gl2) - drawing utilities for WebGL2
 
 ## Running locally
 
