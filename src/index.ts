@@ -634,8 +634,8 @@ function resize() {
 }
 
 function adjustScreenPointerX(x: number) {
-	const offsetLeft = IS_SMALL_SCREEN ? 0.2 : 0.15;
-	const offsetRight = IS_SMALL_SCREEN ? 0.8 : 0.85;
+	const offsetLeft = IS_SMALL_SCREEN ? 0.2 : 0.1;
+	const offsetRight = IS_SMALL_SCREEN ? 0.8 : 0.9;
 	if (x > innerWidth * offsetRight) {
 		x = innerWidth * offsetRight;
 	}
