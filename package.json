@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "2D physics with C++ and WebGL2",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build"
   },
   "repository": {
@@ -25,6 +26,10 @@
   "homepage": "https://github.com/gnikoloff/2d-phy-dojo#readme",
   "devDependencies": {
     "vite": "^5.0.9",
+    "vite-plugin-glsl": "^1.2.1",
     "vite-plugin-top-level-await": "^1.4.1"
+  },
+  "dependencies": {
+    "gl-bench": "^1.0.42"
   }
 }

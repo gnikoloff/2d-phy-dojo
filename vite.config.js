@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
-import topLevelAwait from "vite-plugin-top-level-await";
+import topLevelAwait from "vite-plugin-top-level-await"
+import glsl from 'vite-plugin-glsl'
 
 export default defineConfig({
   plugins: [
+    glsl(),
     topLevelAwait({
       // The export name of top-level await promise for each chunk module
       promiseExportName: "__tla",
