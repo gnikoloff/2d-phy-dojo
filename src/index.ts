@@ -1,4 +1,4 @@
-import GLBench from "gl-bench/dist/gl-bench";
+import Stats from "stats.js";
 
 const Phy2DModule = await import("./lib/2d-phy/Phy2D");
 const { Vec2, Body, World, vector$Vec2$ } = await Phy2DModule.default();
@@ -16,9 +16,20 @@ import {
 import vertexShaderSrc from "./uberShader.vert";
 import fragmentShaderSrc from "./uberShader.frag";
 
-const BOX_SHAPE = 0;
-const CIRCLE_SHAPE = 1;
-const TRIANGLE_SHAPE = 2;
+enum RenderMode {
+	BOX,
+	CIRCLE,
+	TRIANGLE,
+	OUTLINE,
+	ALL,
+}
+
+enum Shape {
+	BOX,
+	CIRCLE,
+	TRIANGLE,
+}
+
 const OUT_OF_SCREEN_VEC2 = new Vec2(-1000, -1000);
 const SIM_WIDTH = Math.min(innerWidth, 1920);
 const SIM_HEIGHT = Math.min(innerHeight, 800);
@@ -32,7 +43,9 @@ const OUTSIDE_COLOR = [0.945, 0.7686, 0.0588];
 const widthDelta = innerWidth - SIM_WIDTH;
 const heightDelta = innerHeight - SIM_HEIGHT;
 const tempVector = new Vec2(-1000, -1000);
+const targetGravity = -5;
 
+let renderMode = RenderMode.ALL;
 let oldTime = 0;
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,7 +56,10 @@ const c = document.getElementById("c") as HTMLCanvasElement;
 resize();
 const gl = c.getContext("webgl2");
 
-const bench = new GLBench(gl);
+const stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+const statsWrapper = document.getElementById("stats-wrapper");
+statsWrapper.appendChild(stats.dom);
 
 const orthoCamera = new OrthographicCamera(
 	0,
@@ -106,12 +122,14 @@ cc.classList.add("fadeable");
 document.body.appendChild(cc);
 const ctx = cc.getContext("2d");
 const relFontSize = 1;
-ctx.font = `bold ${relFontSize}px Helvetica`;
+const fontWeight = "bold";
+const fontFamily = "Helvetica";
+ctx.font = `${fontWeight} ${relFontSize}px ${fontFamily}`;
 const word = "2024";
 const fontSize =
 	relFontSize * ((cc.width * 0.77) / ctx.measureText(word).width);
 // const fontSize = relFontSize * ((cc.width * 1) / ctx.measureText(word).width);
-ctx.font = `bold ${fontSize}px Helvetica`;
+ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
 ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 ctx.fillStyle = "white";
@@ -127,7 +145,6 @@ const idata = new Uint32Array(
 // ctx.clearRect(0, 0, cc.width, cc.height);
 const gridX = 10;
 const gridY = 10;
-ctx.globalAlpha = 0.2;
 for (let x = 0; x < cc.width; x += gridX) {
 	for (let y = 0; y < cc.height; y += gridY) {
 		if (idata[y * cc.width + x]) {
@@ -142,9 +159,8 @@ for (let x = 0; x < cc.width; x += gridX) {
 const boxAnimatedBodies = [];
 const circleAnimatedBodies = [];
 const triangleAnimatedBodies = [];
-const world = new World(-6.5, innerWidth, innerHeight);
+const world = new World(0, innerWidth, innerHeight);
 const floor = new Body(innerWidth, 1, innerWidth * 0.5, innerHeight, 0);
-floor.restitution = 1;
 const leftWall = new Body(1, innerHeight * 2, 0, innerHeight * 0.5, 0);
 const rightWall = new Body(
 	1,
@@ -171,53 +187,56 @@ while (offsetY < coverHeight) {
 	let biggestRowScale = 0;
 	let offsetX = 0;
 	const maxScaleAllowed = Math.cos((offsetY / coverHeight) * Math.PI * 2);
+	const a = IS_SMALL_SCREEN ? 11 : 36;
+	const b = IS_SMALL_SCREEN ? 25 : 51;
+	let halfScaleAllowed = (maxScaleAllowed * a + b) * 0.5;
+	let scale = halfScaleAllowed + Math.random() * halfScaleAllowed;
 	while (offsetX < SIM_WIDTH) {
-		const a = IS_SMALL_SCREEN ? 11 : 36;
-		const b = IS_SMALL_SCREEN ? 25 : 51;
-		let halfScaleAllowed = (maxScaleAllowed * a + b) * 0.5;
-		// if (offsetY > coverHeight * 0.16 && offsetY < coverHeight * 0.85) {
-		// 	halfScaleAllowed = (maxScaleAllowed * 12 + 25) * 0.5;
-		// }
-		let scale = halfScaleAllowed + Math.random() * halfScaleAllowed;
-
-		const circleX = scale * 0.5 + offsetX + widthDelta * 0.5;
-		const circleY = offsetY + heightDelta * 0.5;
+		const posX = scale * 0.5 + offsetX + widthDelta * 0.5;
 
 		let body;
 
-		let shapeType = Math.random() < 0.9 ? CIRCLE_SHAPE : TRIANGLE_SHAPE;
+		let shapeType = Math.random() < 0.9 ? Shape.CIRCLE : Shape.TRIANGLE;
 		if (offsetY > coverHeight * 0.3 && offsetY < coverHeight * 0.7) {
 			shapeType = Math.floor(Math.random() * 2);
 		}
-		const adjustedOffsetY = offsetY - innerHeight * 0.1 + heightDelta * 0.625;
-		if (shapeType === CIRCLE_SHAPE) {
-			body = new Body(scale * 1.015, circleX, adjustedOffsetY, 1);
+		let adjustedOffsetY = offsetY + heightDelta * 0.5;
+
+		if (shapeType === Shape.CIRCLE) {
+			body = new Body(scale * 1.015, posX, adjustedOffsetY, 1);
 			body.scale = scale;
 			circleAnimatedBodies.push(body);
-		} else if (shapeType === BOX_SHAPE) {
+		} else if (shapeType === Shape.BOX) {
 			body = new Body(
 				scale * 2 * 1.015,
 				scale * 2 * 1.015,
-				circleX,
+				posX,
 				adjustedOffsetY,
 				2,
 			);
 			body.scale = scale * 2;
 			boxAnimatedBodies.push(body);
-		} else if (shapeType === TRIANGLE_SHAPE) {
+		} else if (shapeType === Shape.TRIANGLE) {
 			const vertices = new vector$Vec2$();
 
 			vertices.push_back(new Vec2(-0.5 * scale * 2, 0.5 * scale * 2));
 			vertices.push_back(new Vec2(0 * scale * 2, -0.5 * scale * 2));
 			vertices.push_back(new Vec2(0.5 * scale * 2, 0.5 * scale * 2));
 
-			body = new Body(vertices, circleX, adjustedOffsetY, 10, 0, 0);
+			body = new Body(vertices, posX, adjustedOffsetY, 10, 0, 0);
 			body.scale = scale * 2;
 			triangleAnimatedBodies.push(body);
 		}
 
-		if (scale > biggestRowScale) {
-			biggestRowScale = scale;
+		// if (adjustedOffsetY + body.scale > innerHeight) {
+		// 	tempVector.x = 0;
+		// 	tempVector.y -= adjustedOffsetY + body.scale - innerHeight;
+		// 	body.position = tempVector;
+		// }
+
+		const upscaler = adjustedOffsetY > SIM_HEIGHT * 0.5 ? 1.2 : 1;
+		if (body.scale * upscaler > biggestRowScale) {
+			biggestRowScale = body.scale * upscaler;
 		}
 
 		body.restitution = 0.1;
@@ -226,8 +245,8 @@ while (offsetY < coverHeight) {
 
 		for (let n = 0; n < wordPositions.length; n++) {
 			const { x, y } = wordPositions[n];
-			const dx = x - circleX;
-			const dy = y - circleY * 1;
+			const dx = x - posX;
+			const dy = y - adjustedOffsetY;
 			const dist = Math.sqrt(dx * dx + dy * dy);
 			const minDist = 10;
 			if (dist < minDist) {
@@ -236,10 +255,9 @@ while (offsetY < coverHeight) {
 		}
 		offsetX += scale * 2;
 	}
-	offsetY += biggestRowScale * 1.4;
+	offsetY += biggestRowScale;
 	stepYIdx++;
 }
-
 const boxTransforms = new Float32Array(boxAnimatedBodies.length * 4);
 const boxColors = new Float32Array(boxAnimatedBodies.length * 3);
 const circleTransforms = new Float32Array(circleAnimatedBodies.length * 4);
@@ -398,13 +416,14 @@ setTimeout(() => {
 	cc.classList.add("faded");
 	requestAnimationFrame(drawFrame);
 	cc.addEventListener("transitionend", () => {
-		// cc.parentNode.removeChild(cc);
+		cc.parentNode.removeChild(cc);
 	});
 }, INTRO_DELAY);
 document.body.addEventListener("mousedown", onMouseDown);
 document.body.addEventListener("mouseup", onMouseUp);
 document.body.addEventListener("touchmove", onTouchMove);
 document.body.addEventListener("touchend", onTouchEnd);
+document.body.addEventListener("keydown", onKeyDown);
 
 function onMouseDown() {
 	document.body.addEventListener("mousemove", onMouseMove);
@@ -437,11 +456,28 @@ function onTouchEnd() {
 	mouseCircle.position = OUT_OF_SCREEN_VEC2;
 }
 
+function onKeyDown(e) {
+	if (e.key === "1") {
+		renderMode = RenderMode.BOX;
+	} else if (e.key === "2") {
+		renderMode = RenderMode.CIRCLE;
+	} else if (e.key === "3") {
+		renderMode = RenderMode.TRIANGLE;
+	} else if (e.key === "4") {
+		renderMode = RenderMode.OUTLINE;
+	} else if (e.key === "5") {
+		renderMode = RenderMode.ALL;
+	}
+}
+
 function drawFrame(now) {
 	const dt = Math.min((now - oldTime) * 0.001, 0.01667);
 	oldTime = now;
 
-	bench.begin("Simulation");
+	stats.begin();
+
+	world.gravity = world.gravity + (targetGravity - world.gravity) * (dt * 50);
+	// console.log(world.gravity);
 
 	// step through the physics sim
 	world.Update(dt);
@@ -479,8 +515,7 @@ function drawFrame(now) {
 
 	drawScene();
 
-	bench.end("Simulation");
-	bench.nextFrame(now);
+	stats.end();
 	requestAnimationFrame(drawFrame);
 }
 
@@ -522,24 +557,27 @@ function drawScene() {
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, boxIndexBuffer);
 
 	// draw boxes
-	gl.drawElementsInstanced(
-		gl.TRIANGLES,
-		boxGeometry.vertexCount,
-		gl.UNSIGNED_SHORT,
-		0,
-		boxAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.BOX || renderMode === RenderMode.ALL) {
+		gl.drawElementsInstanced(
+			gl.TRIANGLES,
+			boxGeometry.vertexCount,
+			gl.UNSIGNED_SHORT,
+			0,
+			boxAnimatedBodies.length,
+		);
+	}
 
 	gl.useProgram(lineProgram);
-
 	gl.bindBuffer(gl.ARRAY_BUFFER, boxLineVertexBuffer);
 	gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
-	gl.drawArraysInstanced(
-		gl.LINE_LOOP,
-		0,
-		boxLineGeometry.vertexCount,
-		boxAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.OUTLINE || renderMode === RenderMode.ALL) {
+		gl.drawArraysInstanced(
+			gl.LINE_LOOP,
+			0,
+			boxLineGeometry.vertexCount,
+			boxAnimatedBodies.length,
+		);
+	}
 
 	gl.useProgram(shapeProgram);
 
@@ -583,25 +621,29 @@ function drawScene() {
 	// circles index buffer
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, circleIndexBuffer);
 
-	// draw filled circle
-	gl.drawElementsInstanced(
-		gl.TRIANGLES,
-		circleGeometry.vertexCount,
-		gl.UNSIGNED_SHORT,
-		0,
-		circleAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.CIRCLE || renderMode === RenderMode.ALL) {
+		// draw filled circle
+		gl.drawElementsInstanced(
+			gl.TRIANGLES,
+			circleGeometry.vertexCount,
+			gl.UNSIGNED_SHORT,
+			0,
+			circleAnimatedBodies.length,
+		);
+	}
 
 	gl.useProgram(lineProgram);
 
 	// draw outline circle
 	gl.bindBuffer(gl.ARRAY_BUFFER, circleLineVertexBuffer);
-	gl.drawArraysInstanced(
-		gl.LINE_LOOP,
-		1,
-		circleLineGeometry.vertexCount,
-		circleAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.OUTLINE || renderMode === RenderMode.ALL) {
+		gl.drawArraysInstanced(
+			gl.LINE_LOOP,
+			1,
+			circleLineGeometry.vertexCount,
+			circleAnimatedBodies.length,
+		);
+	}
 
 	// draw triangles
 	gl.useProgram(shapeProgram);
@@ -624,20 +666,24 @@ function drawScene() {
 	// triangle position
 	gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
 
-	gl.drawArraysInstanced(
-		gl.TRIANGLES,
-		0,
-		triangleGeometry.vertexCount,
-		triangleAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.TRIANGLE || renderMode === RenderMode.ALL) {
+		gl.drawArraysInstanced(
+			gl.TRIANGLES,
+			0,
+			triangleGeometry.vertexCount,
+			triangleAnimatedBodies.length,
+		);
+	}
 
 	gl.useProgram(lineProgram);
-	gl.drawArraysInstanced(
-		gl.LINE_LOOP,
-		0,
-		triangleGeometry.vertexCount,
-		triangleAnimatedBodies.length,
-	);
+	if (renderMode === RenderMode.OUTLINE || renderMode === RenderMode.ALL) {
+		gl.drawArraysInstanced(
+			gl.LINE_LOOP,
+			0,
+			triangleGeometry.vertexCount,
+			triangleAnimatedBodies.length,
+		);
+	}
 }
 
 function resize() {
@@ -660,8 +706,8 @@ function adjustScreenPointerX(x: number) {
 }
 
 function adjustScreenPointerY(y: number) {
-	const offsetTop = IS_SMALL_SCREEN ? 0.25 : 0.2;
-	const offsetBottom = IS_SMALL_SCREEN ? 0.75 : 0.8;
+	const offsetTop = IS_SMALL_SCREEN ? 0.25 : 0.1;
+	const offsetBottom = IS_SMALL_SCREEN ? 0.75 : 0.9;
 
 	if (y > innerHeight * offsetBottom) {
 		y = innerHeight * offsetBottom;
