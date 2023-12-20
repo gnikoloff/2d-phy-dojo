@@ -30,6 +30,6 @@
     "vite-plugin-top-level-await": "^1.4.1"
   },
   "dependencies": {
-    "gl-bench": "^1.0.42"
+    "stats.js": "^0.17.0"
   }
 }
