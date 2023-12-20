@@ -43,6 +43,18 @@
       transform: scale(1.1);
     }
 
+    #no-webgl2 {
+      z-index: 9999999;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      padding: 2rem;
+      background: rgb(153, 153, 153);
+      display: none;
+    }
+
     #portrait-warn {
       text-align: center;
       position: fixed;
@@ -138,10 +150,23 @@
     <h1>This demo requires landscape mode</h1>
     <p>Please rotate your device horizontally</p>
   </div>
+  <div id="no-webgl2">
+    <h1>Your browser does not support WebGL2</h1>
+    Please update to a modern browser.
+  </div>
   <div id="info">
     <div id="stats-wrapper"></div>
   </div>
   <canvas id="c" />
+  <script>
+    (() => {
+      const ccc = document.createElement("canvas")
+      const gl = ccc.getContext("webgl2")
+      if (!gl) {
+        document.getElementById("no-webgl2").style.setProperty("display", "block")
+      }
+    })()
+  </script>
 </body>
 
 </html>
