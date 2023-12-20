@@ -248,7 +248,7 @@ while (offsetY < coverHeight) {
 			const dx = x - posX;
 			const dy = y - adjustedOffsetY;
 			const dist = Math.sqrt(dx * dx + dy * dy);
-			const minDist = 10;
+			const minDist = 14;
 			if (dist < minDist) {
 				body.isInside = true;
 			}
