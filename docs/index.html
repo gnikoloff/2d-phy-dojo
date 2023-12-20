@@ -43,32 +43,6 @@
       transform: scale(1.1);
     }
 
-    #gl-bench {
-      top: env(safe-area-inset-top) !important;
-      left: env(safe-area-inset-left) !important;
-    }
-
-    #gl-bench div {
-      background: #0f0 !important;
-      border: 1px solid rgb(204, 204, 204);
-    }
-
-    #gl-bench rect {
-      fill: black !important;
-    }
-
-    #gl-bench polyline {
-      stroke: white !important;
-    }
-
-    #gl-bench .opacity {
-      stroke: black !important;
-    }
-
-    #gl-bench line {
-      stroke: white !important;
-    }
-
     #portrait-warn {
       text-align: center;
       position: fixed;
@@ -93,7 +67,18 @@
     #landscape-icon svg {
       width: 100%;
       height: 100%;
+    }
 
+    #info {
+      position: fixed;
+
+      top: env(safe-area-inset-top);
+      left: env(safe-area-inset-left);
+      display: flex;
+    }
+
+    #stats-wrapper>div {
+      position: relative !important;
     }
 
     @media (orientation: portrait) {
@@ -110,7 +95,7 @@
       opacity: 0;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-hijpacp9.js"></script>
+  <script type="module" crossorigin src="./assets/index-6EZZo6D1.js"></script>
 </head>
 
 <body>
@@ -152,6 +137,9 @@
     </div>
     <h1>This demo requires landscape mode</h1>
     <p>Please rotate your device horizontally</p>
+  </div>
+  <div id="info">
+    <div id="stats-wrapper"></div>
   </div>
   <canvas id="c" />
 </body>
